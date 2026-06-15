@@ -572,6 +572,20 @@ function App() {
   }, [settingsData]);
 
   function handleCreateShow(showData) {
+    if (showData.id) {
+      const updatedShow = {
+        ...showData,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setShows((currentShows) =>
+        currentShows.map((show) => (show.id === updatedShow.id ? updatedShow : show))
+      );
+      setSelectedShowId(updatedShow.id);
+      setActiveModule("dashboard");
+      return;
+    }
+
     const newShow = {
       ...showData,
       id: crypto.randomUUID(),
@@ -1045,11 +1059,11 @@ function DashboardView({
                       <div className="table-actions">
                         <button
                           type="button"
-                          onClick={() => onOpenShow(show.id, "routes")}
-                          aria-label={`Abrir produção de ${show.eventName}`}
+                          onClick={() => onOpenShow(show.id, "shows")}
+                          aria-label={`Editar ${show.eventName}`}
                         >
                           <Eye size={15} />
-                          Abrir
+                          Editar
                         </button>
                         <button
                           type="button"
@@ -1129,7 +1143,15 @@ function ModuleView({
   onSaveSettings,
 }) {
   if (activeModule === "shows") {
-    return <ShowsView shows={shows} onCreateShow={onCreateShow} />;
+    return (
+      <ShowsView
+        shows={shows}
+        selectedShow={selectedShow}
+        selectedShowId={selectedShowId}
+        setSelectedShowId={setSelectedShowId}
+        onCreateShow={onCreateShow}
+      />
+    );
   }
 
   if (activeModule === "routes") {
@@ -2261,9 +2283,20 @@ function TechnicalFormView({
 }
 
 
-function ShowsView({ shows, onCreateShow }) {
+function ShowsView({ shows, selectedShow, selectedShowId, setSelectedShowId, onCreateShow }) {
   const [formData, setFormData] = useState(emptyShowForm);
   const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    if (selectedShowId && selectedShow?.id === selectedShowId) {
+      setFormData({ ...emptyShowForm, ...selectedShow });
+      setFormError("");
+      return;
+    }
+
+    setFormData(emptyShowForm);
+    setFormError("");
+  }, [selectedShowId, selectedShow]);
 
   function updateField(field, value) {
     setFormData((currentFormData) => ({ ...currentFormData, [field]: value }));
@@ -2293,8 +2326,8 @@ function ShowsView({ shows, onCreateShow }) {
         <form onSubmit={handleSubmit}>
           <div className="panel-header">
             <div>
-              <span className="eyebrow">Cadastro de show</span>
-              <h3>Novo show da turnê</h3>
+              <span className="eyebrow">{formData.id ? "Edição de show" : "Cadastro de show"}</span>
+              <h3>{formData.id ? "Editar informações do show" : "Novo show da turnê"}</h3>
             </div>
             <span className="status">{statusLabels[formData.status]}</span>
           </div>
@@ -2398,9 +2431,15 @@ function ShowsView({ shows, onCreateShow }) {
           </div>
 
           <div className="actions">
-            <button type="submit">Salvar show</button>
-            <button type="button" onClick={() => setFormData(emptyShowForm)}>
-              Limpar
+            <button type="submit">{formData.id ? "Atualizar show" : "Salvar show"}</button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedShowId?.("");
+                setFormData(emptyShowForm);
+              }}
+            >
+              Novo show
             </button>
           </div>
         </form>
